@@ -135,6 +135,17 @@
   .ans.keep:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
   .ans.toss:hover{background:var(--toss-soft);border-color:var(--toss);color:var(--toss)}
   .ans.donate:hover{background:var(--donate-soft);border-color:var(--donate);color:var(--donate)}
+  .ans.sell:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  .pricefield,.soldctl{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-strong);border-radius:9px;padding:0 10px;background:var(--card)}
+  .pricefield span,.soldctl span{color:var(--muted);font-weight:600}
+  .pricefield input,.soldctl input{border:none;padding:9px 2px;width:66px;background:transparent}
+  .pricefield input:focus,.soldctl input:focus{outline:none}
+  .soldctl{padding:0 5px 0 10px}
+  .soldctl .ans{border:none;padding:8px 12px;background:var(--accent);color:#fff}
+  .soldctl .ans:hover{background:var(--accent-ink)}
+  .madebar{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);color:var(--accent-ink);
+    border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px;font-weight:500}
+  .madebar b{font-family:"Bricolage Grotesque";font-size:19px}
 
   .empty{text-align:center;color:var(--muted);padding:44px 20px}
   .empty svg{width:30px;height:30px;margin-bottom:10px;opacity:.5}
@@ -470,8 +481,7 @@ function goalCard(g){
 /* ---------- SORT (triage) ---------- */
 function sortView(){
   const sub = state.sub.sort;
-  const qCount = state.triage.filter(t=>t.status==='question').length;
-  const tabs = [['questions','Questions', questionsForMe()||''],['toss','Toss'],['donate','Donate']];
+  const tabs = [['questions','Questions', questionsForMe()||''],['toss','Toss'],['donate','Donate'],['sell','Sell']];
   let body='';
   if(sub==='questions'){
     const whoOpts = MEMBERS.map(m=>`<option ${m===other()?'selected':''}>${esc(m)}</option>`).join('');
@@ -488,6 +498,20 @@ function sortView(){
     const qs = state.triage.filter(t=>t.status==='question');
     body += qs.length ? `<div class="stack">${qs.map(qCard).join('')}</div>`
       : empty('help-circle','No open questions.');
+  } else if(sub==='sell'){
+    const made = state.triage.filter(t=>t.resolution==='sold').reduce((a,t)=>a+(t.soldPrice||0),0);
+    body = `<div class="card" style="padding:16px;margin-bottom:16px"><div class="stack">
+        <input type="text" id="s-desc" placeholder="Add something to sell…">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="pricefield"><span>$</span><input type="text" inputmode="numeric" id="s-ask" placeholder="Asking"></span>
+          ${photoInput('s')}
+          <button class="btn" style="margin-left:auto" data-act="add-sell"><i data-lucide="plus"></i>Add to sell</button>
+        </div><div id="s-photo" class="meta"></div>
+      </div></div>
+      <div class="madebar"><span>Made so far</span><b>$${made}</b></div>`;
+    const items = state.triage.filter(t=>t.status==='sell');
+    body += items.length ? `<div class="stack">${items.map(sellCard).join('')}</div>`
+      : empty('tag','Nothing listed to sell yet.');
   } else {
     const kind = sub; // toss | donate
     const label = kind==='toss'?'toss':'donate';
@@ -503,8 +527,31 @@ function sortView(){
     body += items.length ? `<div class="card"><div class="stack" style="gap:0">${items.map(pileRow).join('')}</div></div>`
       : empty(kind==='toss'?'trash-2':'gift', `Nothing in the ${label} pile.`);
   }
-  return head('Sort','Keep, toss, or donate — sorted out together.') +
+  return head('Sort','Keep, toss, donate, or sell — sorted out together.') +
     subtabs('sort', tabs) + body;
+}
+function sellCard(t){
+  const stageChip = t.stage==='listed'
+    ? '<span class="chip" style="background:var(--donate-soft);color:var(--donate)"><i data-lucide="megaphone"></i>Listed</span>'
+    : '<span class="chip who"><i data-lucide="clock"></i>To list</span>';
+  return `<div class="card" style="padding:14px" data-id="${t.$id}">
+    <div style="display:flex;gap:12px">
+      ${t.photoId?`<img class="thumb" src="${photoURL(t.photoId)}" alt="">`:''}
+      <div class="body">
+        <p class="title">${esc(t.description)}</p>
+        <div class="meta">
+          <span class="chip" style="background:var(--accent-soft);color:var(--accent-ink)"><i data-lucide="tag"></i>Asking $${t.askPrice||0}</span>
+          ${stageChip}
+        </div>
+      </div>
+      <button class="iconbtn" data-act="del-triage" data-id="${t.$id}"><i data-lucide="trash-2"></i></button>
+    </div>
+    <div class="answer">
+      ${t.stage!=='listed'?`<button class="ans" data-act="mark-listed" data-id="${t.$id}"><i data-lucide="megaphone"></i>Mark listed</button>`:''}
+      <span class="soldctl"><span>$</span><input type="text" inputmode="numeric" data-soldprice placeholder="${t.askPrice||0}">
+        <button class="ans" data-act="mark-sold" data-id="${t.$id}"><i data-lucide="badge-dollar-sign"></i>Sold</button></span>
+    </div>
+  </div>`;
 }
 function qCard(t){
   const forMe = t.askedTo===state.me;
@@ -521,6 +568,7 @@ function qCard(t){
       <button class="ans keep" data-act="answer" data-id="${t.$id}" data-r="keep"><i data-lucide="check"></i>Keep</button>
       <button class="ans toss" data-act="answer" data-id="${t.$id}" data-r="toss"><i data-lucide="trash-2"></i>Toss</button>
       <button class="ans donate" data-act="answer" data-id="${t.$id}" data-r="donate"><i data-lucide="gift"></i>Donate</button>
+      <button class="ans sell" data-act="answer" data-id="${t.$id}" data-r="sell"><i data-lucide="tag"></i>Sell</button>
     </div>` : `<div class="meta" style="margin-top:8px">Waiting on ${esc(t.askedTo)} to decide.</div>`}
   </div>`;
 }
@@ -563,17 +611,19 @@ function archiveView(){
   const doneTasks = state.tasks.filter(t=>t.done);
   const doneGoals = state.goals.filter(g=>g.type==='oneoff' && g.done);
   const rows = [];
-  arch.forEach(t=>rows.push(archRow(t.description, resLabel(t.resolution), 'triage', t.$id)));
+  arch.forEach(t=>rows.push(archRow(t.description, resLabel(t), 'triage', t.$id)));
   doneGoals.forEach(g=>rows.push(archRow(g.title, {t:'Goal done',c:'keep',i:'target'}, 'goals', g.$id)));
   doneTasks.forEach(t=>rows.push(archRow(t.title, {t: t.category==='school'?'School':'Vic', c:'donate', i:'clipboard-list'}, 'tasks', t.$id)));
   const body = rows.length ? `<div class="card"><div class="stack" style="gap:0">${rows.join('')}</div></div>`
     : empty('archive','Nothing archived yet.');
   return head('Archive','Everything you’ve finished and cleared.') + body;
 }
-function resLabel(r){
+function resLabel(t){
+  const r = t.resolution;
   if(r==='keep')   return {t:'Kept', c:'keep', i:'check'};
   if(r==='toss')   return {t:'Tossed', c:'toss', i:'trash-2'};
   if(r==='donate') return {t:'Donated', c:'donate', i:'gift'};
+  if(r==='sold')   return {t:`Sold · $${t.soldPrice||0}`, c:'accent', i:'badge-dollar-sign'};
   return {t:'Done', c:'keep', i:'check'};
 }
 function archRow(title, tag, cid, id){
@@ -584,7 +634,7 @@ function archRow(title, tag, cid, id){
 }
 
 /* ------------------------- events ------------------------- */
-let pendingPhoto = { q:null, d:null };
+let pendingPhoto = { q:null, d:null, s:null };
 
 document.addEventListener('click', async (e)=>{
   const nav = e.target.closest('[data-nav]');
@@ -632,8 +682,21 @@ document.addEventListener('click', async (e)=>{
         askedBy:state.me, askedTo:who, resolution:''});
       pendingPhoto.q=null; await refresh(); return; }
     if(act==='answer'){ const r=el.dataset.r;
-      const patch = r==='keep' ? {status:'archived',resolution:'keep'} : {status:r,resolution:r};
+      let patch;
+      if(r==='keep') patch={status:'archived',resolution:'keep'};
+      else if(r==='sell') patch={status:'sell',stage:'tolist',resolution:''};
+      else patch={status:r,resolution:r};
       await set('triage',id,patch); await refresh(); return; }
+    if(act==='add-sell'){ const desc=val('s-desc'); if(!desc){toast('What are you selling?');return;}
+      const ask=parseInt(val('s-ask').replace(/[^0-9]/g,''),10)||0;
+      await add('triage',{description:desc, photoId:pendingPhoto.s||'', status:'sell', stage:'tolist',
+        askPrice:ask, askedBy:state.me, resolution:''});
+      pendingPhoto.s=null; await refresh(); return; }
+    if(act==='mark-listed'){ await set('triage',id,{stage:'listed'}); await refresh(); return; }
+    if(act==='mark-sold'){ const card=el.closest('.card'); const inp=card.querySelector('[data-soldprice]');
+      const t=state.triage.find(x=>x.$id===id);
+      let price=parseInt((inp?.value||'').replace(/[^0-9]/g,''),10); if(!price) price=t?.askPrice||0;
+      await set('triage',id,{status:'archived',resolution:'sold',soldPrice:price}); await refresh(); return; }
     if(act==='add-pile'){ const kind=el.dataset.kind; const desc=val('d-desc'); if(!desc){toast('Add a description');return;}
       await add('triage',{description:desc, photoId:pendingPhoto.d||'', status:kind, askedBy:state.me, resolution:''});
       pendingPhoto.d=null; await refresh(); return; }
