@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Homeward</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{
+    --paper:#f4f6f3; --card:#ffffff; --ink:#1c261f; --muted:#6a7570;
+    --line:#e4e8e2; --line-strong:#d3d9d0;
+    --accent:#1f7a5a; --accent-ink:#12583f; --accent-soft:#e7f1ec;
+    --amber:#c47f22; --amber-soft:#f9efdc;
+    --keep:#1f7a5a; --keep-soft:#e7f1ec; --toss:#b0503a; --toss-soft:#f6e6e1; --donate:#3a6ea5; --donate-soft:#e6eef6;
+    --radius:14px; --shadow:0 1px 2px rgba(28,38,31,.05), 0 6px 20px rgba(28,38,31,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:Inter,system-ui,sans-serif; font-size:15px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.wm,.tab,.nav-label{font-family:"Bricolage Grotesque",Inter,sans-serif}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:15px}
+  .hidden{display:none !important}
+
+  /* ---------- shell ---------- */
+  .shell{display:grid;grid-template-columns:230px 1fr;min-height:100dvh}
+  .side{
+    background:var(--card);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;gap:2px;padding:20px 14px;position:sticky;top:0;height:100dvh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--accent);
+    display:grid;place-items:center;color:#fff;flex:0 0 auto}
+  .brand .mark svg{width:17px;height:17px}
+  .wm{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .overall{padding:2px 8px 14px;margin-bottom:6px}
+  .overall .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .overall .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .overall .pct{font-family:"Bricolage Grotesque";font-weight:600;font-size:14px;color:var(--accent-ink)}
+  .track{height:7px;border-radius:20px;background:var(--line);overflow:hidden}
+  .track>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#2ca87a);border-radius:20px;transition:width .5s ease}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;border:none;
+    background:none;color:var(--muted);width:100%;text-align:left;font-size:14.5px;font-weight:450;position:relative;
+  }
+  .nav-item svg{width:18px;height:18px;flex:0 0 auto}
+  .nav-item:hover{background:var(--paper);color:var(--ink)}
+  .nav-item.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+  .nav-item .badge{margin-left:auto;background:var(--amber);color:#fff;font-size:11px;font-weight:600;
+    min-width:19px;height:19px;border-radius:20px;display:grid;place-items:center;padding:0 5px;font-family:Inter}
+  .side .foot{margin-top:auto;padding:8px;color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:8px}
+  .side .foot button{margin-left:auto;background:none;border:none;color:var(--muted);display:grid;place-items:center}
+  .side .foot button svg{width:16px;height:16px}
+
+  main{padding:32px 40px 60px;max-width:840px;width:100%}
+  .head{margin-bottom:22px}
+  .head h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 3px}
+  .head p{margin:0;color:var(--muted);font-size:14px}
+
+  .subtabs{display:flex;gap:4px;margin:0 0 20px;border-bottom:1px solid var(--line)}
+  .tab{background:none;border:none;padding:8px 4px;margin-right:16px;color:var(--muted);font-size:14.5px;
+    font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px}
+  .tab .badge{background:var(--amber);color:#fff;font-size:10.5px;font-weight:600;min-width:17px;height:17px;
+    border-radius:20px;display:grid;place-items:center;padding:0 5px;font-family:Inter}
+  .tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+
+  /* ---------- cards & controls ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .additem{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  input[type=text],textarea,select{
+    background:var(--card);border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;color:var(--ink);width:100%}
+  input[type=text]:focus,textarea:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  textarea{resize:vertical;min-height:44px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:600;font-size:14px;
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .btn svg{width:16px;height:16px}
+  .btn:hover{background:var(--accent-ink)}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line-strong)}
+  .btn.ghost:hover{background:var(--paper)}
+  .btn.sm{padding:7px 12px;font-size:13px}
+  .iconbtn{background:none;border:1px solid transparent;border-radius:8px;padding:6px;color:var(--muted);display:grid;place-items:center}
+  .iconbtn:hover{background:var(--paper);color:var(--toss)}
+  .iconbtn svg{width:16px;height:16px}
+
+  .item{display:flex;align-items:flex-start;gap:14px;padding:14px 16px}
+  .item + .item{border-top:1px solid var(--line)}
+  .item .body{flex:1;min-width:0}
+  .item .title{font-weight:600;font-size:15px;margin:0 0 2px;word-break:break-word}
+  .item .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;flex:0 0 auto;background:var(--paper);border:1px solid var(--line)}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;font-family:Inter}
+  .chip svg{width:12px;height:12px}
+  .chip.who{background:var(--paper);color:var(--muted)}
+  .chip.room{background:var(--accent-soft);color:var(--accent-ink)}
+  .chip.fragile{background:var(--toss-soft);color:var(--toss)}
+  .chip.first{background:var(--amber-soft);color:var(--amber)}
+  .chip.ask{background:var(--amber-soft);color:var(--amber)}
+
+  /* room card */
+  .room{padding:16px}
+  .room .top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .room .name{font-weight:600;font-size:16px;flex:1}
+  .room .pctbig{font-family:"Bricolage Grotesque";font-weight:700;font-size:19px;color:var(--accent-ink);min-width:44px;text-align:right}
+  .room input[type=range]{width:100%;accent-color:var(--accent);height:22px}
+  .room .foot{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--muted);font-size:13px}
+  .secs{display:flex;flex-direction:column;gap:9px;margin:2px 0 4px}
+  .sec{display:flex;align-items:center;gap:10px}
+  .sec .secname{font-size:13.5px;font-weight:500;min-width:110px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sec input[type=range]{flex:1;accent-color:var(--accent);height:20px;min-width:60px}
+  .sec .secpct{font-size:13px;font-weight:600;color:var(--accent-ink);min-width:38px;text-align:right}
+  .sec .iconbtn{padding:4px}
+  .addsec{display:flex;align-items:center;gap:6px;margin-top:10px}
+  .addsec input{padding:8px 11px;font-size:13.5px}
+  .stepper{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
+  .stepper button{background:var(--card);border:none;width:30px;height:30px;display:grid;place-items:center;color:var(--ink)}
+  .stepper button:hover{background:var(--paper)}
+  .stepper span{min-width:30px;text-align:center;font-weight:600;color:var(--ink)}
+
+  .check{appearance:none;width:22px;height:22px;border:2px solid var(--line-strong);border-radius:7px;flex:0 0 auto;margin-top:1px;position:relative;cursor:pointer;background:var(--card)}
+  .check:checked{background:var(--accent);border-color:var(--accent)}
+  .check:checked::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+  .answer{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .ans{border:1px solid var(--line-strong);background:var(--card);border-radius:9px;padding:7px 13px;font-weight:600;font-size:13.5px;display:inline-flex;gap:6px;align-items:center}
+  .ans svg{width:15px;height:15px}
+  .ans.keep:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  .ans.toss:hover{background:var(--toss-soft);border-color:var(--toss);color:var(--toss)}
+  .ans.donate:hover{background:var(--donate-soft);border-color:var(--donate);color:var(--donate)}
+
+  .empty{text-align:center;color:var(--muted);padding:44px 20px}
+  .empty svg{width:30px;height:30px;margin-bottom:10px;opacity:.5}
+  .empty p{margin:0;font-size:14.5px}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:11px 18px;border-radius:11px;font-size:14px;opacity:0;transition:.25s;z-index:60;box-shadow:var(--shadow);pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- auth ---------- */
+  .gate{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .gate .box{width:100%;max-width:380px;text-align:center}
+  .gate .mark{width:52px;height:52px;border-radius:15px;background:var(--accent);display:grid;place-items:center;margin:0 auto 18px}
+  .gate .mark svg{width:28px;height:28px;color:#fff}
+  .gate h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+  .gate p{color:var(--muted);margin:0 0 22px}
+  .gate input{margin-bottom:10px;text-align:center}
+  .gate .btn{width:100%;justify-content:center}
+  .picker{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+  .picker button{flex:1;min-width:120px;padding:16px;border:1px solid var(--line-strong);background:var(--card);border-radius:12px;font-weight:600;font-size:16px;font-family:"Bricolage Grotesque"}
+  .picker button:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+
+  /* ---------- mobile ---------- */
+  .botnav{display:none}
+  @media (max-width:760px){
+    .shell{grid-template-columns:1fr}
+    .side{display:none}
+    main{padding:22px 18px 90px}
+    .head h1{font-size:23px}
+    .botnav{
+      display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);
+      padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around}
+    .botnav button{background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;
+      font-size:10.5px;font-weight:500;padding:5px 8px;flex:1;position:relative;font-family:Inter}
+    .botnav button svg{width:21px;height:21px}
+    .botnav button.on{color:var(--accent-ink)}
+    .botnav .badge{position:absolute;top:1px;right:calc(50% - 22px);background:var(--amber);color:#fff;font-size:9.5px;font-weight:600;
+      min-width:16px;height:16px;border-radius:20px;display:grid;place-items:center;padding:0 4px}
+    .mtop{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+    .mtop .mark{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff}
+    .mtop .mark svg{width:16px;height:16px}
+    .mtop .track{flex:1}
+    .mtop .pct{font-family:"Bricolage Grotesque";font-weight:600;font-size:13px;color:var(--accent-ink)}
+    .mtop .logout{background:none;border:none;color:var(--muted);display:grid;place-items:center}
+    .mtop .logout svg{width:18px;height:18px}
+  }
+  @media (min-width:761px){ .mtop{display:none} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { Client, Account, Databases, Storage, ID, Query }
+  from 'https://cdn.jsdelivr.net/npm/appwrite@26/+esm';
+
+/* ======================= CONFIG — edit these ======================= */
+const ENDPOINT = 'https://nyc.cloud.appwrite.io/v1';
+const PROJECT  = '6a466f2f0009691fdae1';
+const DB       = 'homeward';
+const BUCKET   = 'photos';
+
+// The two of you. Used for assigning goals and tagging questions.
+const MEMBERS  = ['Kyle', 'Andrea'];
+
+// Optional lock: only these emails can get in. Leave [] to allow anyone who
+// logs in. To lock it to just you two, add both emails, e.g.
+// const ALLOWED_EMAILS = ['kyle@example.com', 'andrea@example.com'];
+const ALLOWED_EMAILS = [];
+/* ================================================================== */
+
+const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
+const account = new Account(client);
+const db = new Databases(client);
+const storage = new Storage(client);
+
+const root = document.getElementById('root');
+const $toast = document.getElementById('toast');
+let toastTimer;
+function toast(msg){ $toast.textContent = msg; $toast.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>$toast.classList.remove('show'), 2600); }
+
+const HOME_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>';
+const esc = s => (s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const icons = () => window.lucide && window.lucide.createIcons();
+
+/* ------------------------- state ------------------------- */
+const state = {
+  me:'', email:'', section:'packing',
+  sub:{ packing:'rooms', sort:'questions', tasks:'school' },
+  rooms:[], sections:[], boxes:[], goals:[], triage:[], tasks:[]
+};
+
+const NAV = [
+  ['packing','Packing','package'],
+  ['goals','Goals','target'],
+  ['sort','Sort','help-circle'],
+  ['tasks','Tasks','clipboard-list'],
+  ['archive','Archive','archive'],
+];
+
+/* ------------------------- data ------------------------- */
+const listAll = cid => db.listDocuments({ databaseId:DB, collectionId:cid,
+  queries:[ Query.limit(200), Query.orderDesc('$createdAt') ] }).then(r=>r.documents);
+const add = (cid,data)=>db.createDocument({ databaseId:DB, collectionId:cid, documentId:ID.unique(), data });
+const set = (cid,id,data)=>db.updateDocument({ databaseId:DB, collectionId:cid, documentId:id, data });
+const del = (cid,id)=>db.deleteDocument({ databaseId:DB, collectionId:cid, documentId:id });
+
+async function refresh(){
+  const [rooms,sections,boxes,goals,triage,tasks] = await Promise.all(
+    ['rooms','sections','boxes','goals','triage','tasks'].map(listAll));
+  Object.assign(state,{rooms,sections,boxes,goals,triage,tasks});
+  render();
+}
+
+/* photos */
+function shrink(file, max=1600, q=0.82){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const s=Math.min(1, max/Math.max(img.width,img.height));
+      const w=Math.round(img.width*s), h=Math.round(img.height*s);
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=> b ? res(new File([b],'photo.jpg',{type:'image/jpeg'})) : rej(new Error('convert failed')), 'image/jpeg', q);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=()=>rej(new Error('could not read that image'));
+    img.src=URL.createObjectURL(file);
+  });
+}
+async function uploadPhoto(file){
+  const f = await shrink(file);
+  const r = await storage.createFile({ bucketId:BUCKET, fileId:ID.unique(), file:f });
+  return r.$id;
+}
+const photoURL = id => storage.getFileView({ bucketId:BUCKET, fileId:id });
+
+/* ------------------------- derived ------------------------- */
+const sectionsOf = rid => state.sections.filter(s=>s.roomId===rid);
+const avg = ns => ns.length ? Math.round(ns.reduce((a,b)=>a+b,0)/ns.length) : 0;
+const effPct = r => { const s=sectionsOf(r.$id); return s.length ? avg(s.map(x=>x.percent||0)) : (r.percent||0); };
+const overall = () => state.rooms.length
+  ? Math.round(state.rooms.reduce((a,r)=>a+effPct(r),0)/state.rooms.length) : 0;
+const questionsForMe = () => state.triage.filter(t=>t.status==='question' && t.askedTo===state.me).length;
+const other = () => MEMBERS.find(m=>m!==state.me) || MEMBERS[0];
+
+/* ------------------------- render ------------------------- */
+function render(){
+  const badge = questionsForMe();
+  const nav = NAV.map(([id,label,ic])=>{
+    const b = id==='sort' && badge ? `<span class="badge">${badge}</span>` : '';
+    return `<button class="nav-item ${state.section===id?'on':''}" data-nav="${id}">
+      <i data-lucide="${ic}"></i><span class="nav-label">${label}</span>${b}</button>`;
+  }).join('');
+  const bot = NAV.map(([id,label,ic])=>{
+    const b = id==='sort' && badge ? `<span class="badge">${badge}</span>` : '';
+    return `<button class="${state.section===id?'on':''}" data-nav="${id}">
+      <i data-lucide="${ic}"></i>${label}${b}</button>`;
+  }).join('');
+  const pct = overall();
+
+  root.innerHTML = `
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="mark">${HOME_SVG}</span><span class="wm">Homeward</span></div>
+      <div class="overall">
+        <div class="row"><span class="lbl">Packed</span><span class="pct">${pct}%</span></div>
+        <div class="track"><i style="width:${pct}%"></i></div>
+      </div>
+      ${nav}
+      <div class="foot"><i data-lucide="user"></i>${esc(state.me)}
+        <button data-act="logout" title="Sign out"><i data-lucide="log-out"></i></button></div>
+    </aside>
+    <main>
+      <div class="mtop">
+        <span class="mark">${HOME_SVG}</span>
+        <div class="track"><i style="width:${pct}%"></i></div>
+        <span class="pct">${pct}%</span>
+        <button class="logout" data-act="logout"><i data-lucide="log-out"></i></button>
+      </div>
+      <div id="view">${viewFor(state.section)}</div>
+    </main>
+    <nav class="botnav">${bot}</nav>
+  </div>`;
+  icons();
+}
+
+function viewFor(sec){
+  if(sec==='packing') return packingView();
+  if(sec==='goals')   return goalsView();
+  if(sec==='sort')    return sortView();
+  if(sec==='tasks')   return tasksView();
+  if(sec==='archive') return archiveView();
+}
+const head = (t,p)=>`<div class="head"><h1>${t}</h1><p>${p}</p></div>`;
+const empty = (ic,msg)=>`<div class="card"><div class="empty"><i data-lucide="${ic}"></i><p>${msg}</p></div></div>`;
+const subtabs = (sec, tabs)=>`<div class="subtabs">${tabs.map(([id,label,badge])=>
+  `<button class="tab ${state.sub[sec]===id?'on':''}" data-sub="${sec}:${id}">${label}${badge?`<span class="badge">${badge}</span>`:''}</button>`).join('')}</div>`;
+const photoInput = id => `<label class="btn ghost sm" style="cursor:pointer"><i data-lucide="camera"></i>Photo
+  <input type="file" accept="image/*" data-photo="${id}" class="hidden"></label>`;
+
+/* ---------- PACKING ---------- */
+function packingView(){
+  const sub = state.sub.packing;
+  let body='';
+  if(sub==='rooms'){
+    body = `<div class="additem">
+      <input type="text" id="room-name" placeholder="Add a room — Kitchen, Garage, Isla's room…">
+      <button class="btn" data-act="add-room"><i data-lucide="plus"></i>Add</button></div>`;
+    body += state.rooms.length ? `<div class="stack">${state.rooms.map(roomCard).join('')}</div>`
+      : empty('door-open','No rooms yet. Add one to start tracking.');
+  } else {
+    const opts = state.rooms.map(r=>`<option>${esc(r.name)}</option>`).join('');
+    body = `<div class="card" style="padding:16px;margin-bottom:20px">
+      <div class="stack">
+        <input type="text" id="box-label" placeholder="Box label — e.g. K-1, Books #3">
+        <textarea id="box-contents" placeholder="What's inside?"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="box-src" style="flex:1;min-width:140px"><option value="">From room…</option>${opts}</select>
+          <input type="text" id="box-dst" style="flex:1;min-width:140px" placeholder="Goes to (new house)…">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;gap:7px;align-items:center"><input type="checkbox" id="box-first" class="check"><span>Open first</span></label>
+          <label style="display:flex;gap:7px;align-items:center"><input type="checkbox" id="box-fragile" class="check"><span>Fragile</span></label>
+          <button class="btn" style="margin-left:auto" data-act="add-box"><i data-lucide="plus"></i>Add box</button>
+        </div>
+      </div></div>`;
+    body += state.boxes.length ? `<div class="card"><div class="stack" style="gap:0">${state.boxes.map(boxRow).join('')}</div></div>`
+      : empty('package','No boxes logged yet.');
+  }
+  return head('Packing', 'Track each room and every box.') +
+    subtabs('packing', [['rooms','Rooms'],['boxes','Boxes']]) + body;
+}
+function roomCard(r){
+  const secs = sectionsOf(r.$id);
+  const has = secs.length>0;
+  const pct = has ? avg(secs.map(s=>s.percent||0)) : (r.percent||0);
+  const slider = has
+    ? `<div class="secs">${secs.map(secRow).join('')}</div>`
+    : `<input type="range" min="0" max="100" step="5" value="${r.percent||0}" data-act="room-pct" data-id="${r.$id}">`;
+  return `<div class="card room" data-id="${r.$id}">
+    <div class="top"><span class="name">${esc(r.name)}</span>
+      <span class="pctbig" data-pctlabel>${pct}%</span>
+      <button class="iconbtn" data-act="del-room" data-id="${r.$id}"><i data-lucide="trash-2"></i></button></div>
+    ${slider}
+    <div class="addsec">
+      <input type="text" data-secinput placeholder="Add a section — Kyle's closet, Andrea's chest…">
+      <button class="iconbtn" data-act="add-section" data-id="${r.$id}" title="Add section"><i data-lucide="plus"></i></button>
+    </div>
+    <div class="foot"><i data-lucide="package" style="width:15px;height:15px"></i>Boxes
+      <span class="stepper" style="margin-left:auto">
+        <button data-act="room-box" data-id="${r.$id}" data-d="-1"><i data-lucide="minus"></i></button>
+        <span>${r.boxes||0}</span>
+        <button data-act="room-box" data-id="${r.$id}" data-d="1"><i data-lucide="plus"></i></button>
+      </span></div></div>`;
+}
+function secRow(s){
+  return `<div class="sec">
+    <span class="secname">${esc(s.name)}</span>
+    <input type="range" min="0" max="100" step="5" value="${s.percent||0}" data-act="section-pct" data-id="${s.$id}">
+    <span class="secpct" data-pctlabel>${s.percent||0}%</span>
+    <button class="iconbtn" data-act="del-section" data-id="${s.$id}"><i data-lucide="x"></i></button>
+  </div>`;
+}
+function boxRow(b){
+  const flags = `${b.openFirst?'<span class="chip first"><i data-lucide="star"></i>Open first</span>':''}
+    ${b.fragile?'<span class="chip fragile"><i data-lucide="alert-triangle"></i>Fragile</span>':''}`;
+  const route = [b.sourceRoom, b.destRoom].filter(Boolean).join(' → ');
+  return `<div class="item">
+    <div class="body">
+      <p class="title">${esc(b.label)}</p>
+      ${b.contents?`<div class="meta">${esc(b.contents)}</div>`:''}
+      <div class="meta" style="margin-top:5px">${route?`<span class="chip room"><i data-lucide="move-right"></i>${esc(route)}</span>`:''}${flags}</div>
+    </div>
+    <button class="iconbtn" data-act="del-box" data-id="${b.$id}"><i data-lucide="trash-2"></i></button></div>`;
+}
+
+/* ---------- GOALS ---------- */
+function goalsView(){
+  const roomOpts = state.rooms.map(r=>`<option value="${r.$id}">${esc(r.name)}</option>`).join('');
+  const secOpts = state.sections.map(s=>{
+    const room = state.rooms.find(r=>r.$id===s.roomId);
+    return `<option value="${s.$id}">${esc(room?room.name+' · ':'')}${esc(s.name)}</option>`;
+  }).join('');
+  const whoOpts = MEMBERS.map(m=>`<option ${m===state.me?'selected':''}>${esc(m)}</option>`).join('');
+  const form = `<div class="card" style="padding:16px;margin-bottom:20px"><div class="stack">
+      <input type="text" id="goal-title" placeholder="Goal — e.g. Pack up the china">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="goal-who" style="flex:1;min-width:130px">${whoOpts}</select>
+        <select id="goal-type" style="flex:1;min-width:130px" data-act="goal-type">
+          <option value="oneoff">One-off task</option>
+          <option value="room">Whole room</option>
+          <option value="section">A section</option></select>
+      </div>
+      <select id="goal-room" class="hidden">${roomOpts||'<option value="">No rooms yet</option>'}</select>
+      <select id="goal-section" class="hidden">${secOpts||'<option value="">No sections yet</option>'}</select>
+      <button class="btn" style="align-self:flex-start" data-act="add-goal"><i data-lucide="plus"></i>Add goal</button>
+    </div></div>`;
+  const active = state.goals.filter(g=>!(g.type==='oneoff' && g.done));
+  const list = active.length ? `<div class="stack">${active.map(goalCard).join('')}</div>`
+    : empty('target','No open goals. Nice.');
+  return head('Goals','Who’s doing what, and how far along.') + form + list;
+}
+function goalCard(g){
+  const who = `<span class="chip who"><i data-lucide="user"></i>${esc(g.assignedTo)}</span>`;
+  if(g.type==='room' || g.type==='section'){
+    let p=0, label='';
+    if(g.type==='room'){
+      const room = state.rooms.find(r=>r.$id===g.roomId);
+      p = room?effPct(room):0; label = room?esc(room.name):'room deleted';
+    } else {
+      const sec = state.sections.find(s=>s.$id===g.sectionId);
+      const room = sec ? state.rooms.find(r=>r.$id===sec.roomId) : null;
+      p = sec?sec.percent||0:0;
+      label = sec ? `${room?esc(room.name)+' · ':''}${esc(sec.name)}` : 'section deleted';
+    }
+    return `<div class="card" style="padding:16px" data-id="${g.$id}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <span style="font-weight:600;flex:1">${esc(g.title)}</span>${who}
+        <button class="iconbtn" data-act="del-goal" data-id="${g.$id}"><i data-lucide="trash-2"></i></button></div>
+      <div class="track"><i style="width:${p}%"></i></div>
+      <div class="meta" style="margin-top:7px">${label} · ${p}% packed</div></div>`;
+  }
+  return `<div class="item card">
+    <input type="checkbox" class="check" data-act="goal-done" data-id="${g.$id}">
+    <div class="body"><p class="title">${esc(g.title)}</p><div class="meta">${who}</div></div>
+    <button class="iconbtn" data-act="del-goal" data-id="${g.$id}"><i data-lucide="trash-2"></i></button></div>`;
+}
+
+/* ---------- SORT (triage) ---------- */
+function sortView(){
+  const sub = state.sub.sort;
+  const qCount = state.triage.filter(t=>t.status==='question').length;
+  const tabs = [['questions','Questions', questionsForMe()||''],['toss','Toss'],['donate','Donate']];
+  let body='';
+  if(sub==='questions'){
+    const whoOpts = MEMBERS.map(m=>`<option ${m===other()?'selected':''}>${esc(m)}</option>`).join('');
+    body = `<div class="card" style="padding:16px;margin-bottom:20px"><div class="stack">
+        <input type="text" id="q-desc" placeholder="Found something — what is it?">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:13px">Ask</span>
+          <select id="q-who" style="flex:1;min-width:120px">${whoOpts}</select>
+          ${photoInput('q')}
+          <button class="btn" data-act="ask"><i data-lucide="help-circle"></i>Ask</button>
+        </div>
+        <div id="q-photo" class="meta"></div>
+      </div></div>`;
+    const qs = state.triage.filter(t=>t.status==='question');
+    body += qs.length ? `<div class="stack">${qs.map(qCard).join('')}</div>`
+      : empty('help-circle','No open questions.');
+  } else {
+    const kind = sub; // toss | donate
+    const label = kind==='toss'?'toss':'donate';
+    body = `<div class="card" style="padding:16px;margin-bottom:20px"><div class="stack">
+        <input type="text" id="d-desc" placeholder="Add something to ${label}…">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${photoInput('d')}
+          <button class="btn" style="margin-left:auto;background:var(--${kind})" data-act="add-pile" data-kind="${kind}">
+            <i data-lucide="plus"></i>Add to ${label}</button>
+        </div><div id="d-photo" class="meta"></div>
+      </div></div>`;
+    const items = state.triage.filter(t=>t.status===kind);
+    body += items.length ? `<div class="card"><div class="stack" style="gap:0">${items.map(pileRow).join('')}</div></div>`
+      : empty(kind==='toss'?'trash-2':'gift', `Nothing in the ${label} pile.`);
+  }
+  return head('Sort','Keep, toss, or donate — sorted out together.') +
+    subtabs('sort', tabs) + body;
+}
+function qCard(t){
+  const forMe = t.askedTo===state.me;
+  return `<div class="card" style="padding:14px" data-id="${t.$id}">
+    <div style="display:flex;gap:12px">
+      ${t.photoId?`<img class="thumb" src="${photoURL(t.photoId)}" alt="">`:''}
+      <div class="body">
+        <p class="title">${esc(t.description)}</p>
+        <div class="meta"><span class="chip ask"><i data-lucide="help-circle"></i>${esc(t.askedBy)} → ${esc(t.askedTo)}</span></div>
+      </div>
+      <button class="iconbtn" data-act="del-triage" data-id="${t.$id}"><i data-lucide="trash-2"></i></button>
+    </div>
+    ${forMe ? `<div class="answer">
+      <button class="ans keep" data-act="answer" data-id="${t.$id}" data-r="keep"><i data-lucide="check"></i>Keep</button>
+      <button class="ans toss" data-act="answer" data-id="${t.$id}" data-r="toss"><i data-lucide="trash-2"></i>Toss</button>
+      <button class="ans donate" data-act="answer" data-id="${t.$id}" data-r="donate"><i data-lucide="gift"></i>Donate</button>
+    </div>` : `<div class="meta" style="margin-top:8px">Waiting on ${esc(t.askedTo)} to decide.</div>`}
+  </div>`;
+}
+function pileRow(t){
+  return `<div class="item">
+    <input type="checkbox" class="check" data-act="pile-done" data-id="${t.$id}">
+    ${t.photoId?`<img class="thumb" src="${photoURL(t.photoId)}" alt="">`:''}
+    <div class="body"><p class="title">${esc(t.description)}</p>
+      <div class="meta">${t.resolution?'decided together':'added directly'}</div></div>
+    <button class="iconbtn" data-act="del-triage" data-id="${t.$id}"><i data-lucide="trash-2"></i></button></div>`;
+}
+
+/* ---------- TASKS ---------- */
+function tasksView(){
+  const sub = state.sub.tasks;
+  const meta = sub==='school'
+    ? ['Isla · Nipher Middle School', 'graduation-cap', 'Prep the 7th-grade registration paperwork. Submit after closing.']
+    : ['Vic · painter & carpet', 'paintbrush', 'Follow-ups on the painter and carpet.'];
+  const active = state.tasks.filter(t=>t.category===sub && !t.done);
+  const form = `<div class="additem">
+    <input type="text" id="task-title" placeholder="Add an item…">
+    <button class="btn" data-act="add-task"><i data-lucide="plus"></i>Add</button></div>`;
+  const list = active.length ? `<div class="card"><div class="stack" style="gap:0">${active.map(taskRow).join('')}</div></div>`
+    : empty(meta[1], 'All clear here.');
+  return head('Tasks','Registration and follow-ups.') +
+    subtabs('tasks', [['school','School'],['vic','Vic']]) +
+    `<div class="meta" style="margin:-8px 0 18px;gap:7px"><i data-lucide="${meta[1]}" style="width:16px;height:16px"></i>${meta[0]} — ${meta[2]}</div>` +
+    form + list;
+}
+function taskRow(t){
+  return `<div class="item">
+    <input type="checkbox" class="check" data-act="task-done" data-id="${t.$id}">
+    <div class="body"><p class="title">${esc(t.title)}</p></div>
+    <button class="iconbtn" data-act="del-task" data-id="${t.$id}"><i data-lucide="trash-2"></i></button></div>`;
+}
+
+/* ---------- ARCHIVE ---------- */
+function archiveView(){
+  const arch = state.triage.filter(t=>t.status==='archived');
+  const doneTasks = state.tasks.filter(t=>t.done);
+  const doneGoals = state.goals.filter(g=>g.type==='oneoff' && g.done);
+  const rows = [];
+  arch.forEach(t=>rows.push(archRow(t.description, resLabel(t.resolution), 'triage', t.$id)));
+  doneGoals.forEach(g=>rows.push(archRow(g.title, {t:'Goal done',c:'keep',i:'target'}, 'goals', g.$id)));
+  doneTasks.forEach(t=>rows.push(archRow(t.title, {t: t.category==='school'?'School':'Vic', c:'donate', i:'clipboard-list'}, 'tasks', t.$id)));
+  const body = rows.length ? `<div class="card"><div class="stack" style="gap:0">${rows.join('')}</div></div>`
+    : empty('archive','Nothing archived yet.');
+  return head('Archive','Everything you’ve finished and cleared.') + body;
+}
+function resLabel(r){
+  if(r==='keep')   return {t:'Kept', c:'keep', i:'check'};
+  if(r==='toss')   return {t:'Tossed', c:'toss', i:'trash-2'};
+  if(r==='donate') return {t:'Donated', c:'donate', i:'gift'};
+  return {t:'Done', c:'keep', i:'check'};
+}
+function archRow(title, tag, cid, id){
+  return `<div class="item">
+    <div class="body"><p class="title" style="font-weight:500">${esc(title)}</p></div>
+    <span class="chip" style="background:var(--${tag.c}-soft,#eee);color:var(--${tag.c})"><i data-lucide="${tag.i}"></i>${tag.t}</span>
+    <button class="iconbtn" data-act="arch-del" data-cid="${cid}" data-id="${id}"><i data-lucide="trash-2"></i></button></div>`;
+}
+
+/* ------------------------- events ------------------------- */
+let pendingPhoto = { q:null, d:null };
+
+document.addEventListener('click', async (e)=>{
+  const nav = e.target.closest('[data-nav]');
+  if(nav){ state.section = nav.dataset.nav; render(); return; }
+  const sub = e.target.closest('[data-sub]');
+  if(sub){ const [sec,id]=sub.dataset.sub.split(':'); state.sub[sec]=id; render(); return; }
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  try{
+    if(act==='logout'){ await account.deleteSession({ sessionId:'current' }); location.reload(); return; }
+
+    if(act==='add-room'){ const n=val('room-name'); if(!n) return;
+      await add('rooms',{name:n,percent:0,boxes:0}); await refresh(); return; }
+    if(act==='del-room'){
+      await Promise.all(sectionsOf(id).map(s=>del('sections',s.$id)));
+      await del('rooms',id); await refresh(); return; }
+    if(act==='room-box'){ const r=state.rooms.find(x=>x.$id===id);
+      const n=Math.max(0,(r.boxes||0)+Number(el.dataset.d));
+      await set('rooms',id,{boxes:n}); await refresh(); return; }
+
+    if(act==='add-section'){ const inp=el.closest('.room').querySelector('[data-secinput]');
+      const name=(inp?.value||'').trim(); if(!name){toast('Name the section');return;}
+      await add('sections',{roomId:id,name,percent:0}); await refresh(); return; }
+    if(act==='del-section'){ await del('sections',id); await refresh(); return; }
+
+    if(act==='add-box'){ const label=val('box-label'); if(!label){toast('Give the box a label');return;}
+      await add('boxes',{label, contents:val('box-contents'), sourceRoom:val('box-src'),
+        destRoom:val('box-dst'), openFirst:chk('box-first'), fragile:chk('box-fragile')});
+      await refresh(); return; }
+    if(act==='del-box'){ await del('boxes',id); await refresh(); return; }
+
+    if(act==='add-goal'){ const title=val('goal-title'); if(!title) return;
+      const type=val('goal-type'); const who=val('goal-who');
+      const data={title,assignedTo:who,type,done:false};
+      if(type==='room'){ const rid=val('goal-room'); if(!rid){toast('Pick a room');return;} data.roomId=rid; }
+      if(type==='section'){ const sid=val('goal-section'); if(!sid){toast('Pick a section');return;} data.sectionId=sid; }
+      await add('goals',data); await refresh(); return; }
+    if(act==='goal-done'){ await set('goals',id,{done:true}); await refresh(); return; }
+    if(act==='del-goal'){ await del('goals',id); await refresh(); return; }
+
+    if(act==='ask'){ const desc=val('q-desc'); if(!desc){toast('What did you find?');return;}
+      const who=val('q-who');
+      await add('triage',{description:desc, photoId:pendingPhoto.q||'', status:'question',
+        askedBy:state.me, askedTo:who, resolution:''});
+      pendingPhoto.q=null; await refresh(); return; }
+    if(act==='answer'){ const r=el.dataset.r;
+      const patch = r==='keep' ? {status:'archived',resolution:'keep'} : {status:r,resolution:r};
+      await set('triage',id,patch); await refresh(); return; }
+    if(act==='add-pile'){ const kind=el.dataset.kind; const desc=val('d-desc'); if(!desc){toast('Add a description');return;}
+      await add('triage',{description:desc, photoId:pendingPhoto.d||'', status:kind, askedBy:state.me, resolution:''});
+      pendingPhoto.d=null; await refresh(); return; }
+    if(act==='pile-done'){ await set('triage',id,{status:'archived'}); await refresh(); return; }
+    if(act==='del-triage'){ await del('triage',id); await refresh(); return; }
+
+    if(act==='add-task'){ const title=val('task-title'); if(!title) return;
+      await add('tasks',{title, category:state.sub.tasks, done:false}); await refresh(); return; }
+    if(act==='task-done'){ await set('tasks',id,{done:true}); await refresh(); return; }
+    if(act==='del-task'){ await del('tasks',id); await refresh(); return; }
+
+    if(act==='arch-del'){ await del(el.dataset.cid,id); await refresh(); return; }
+  }catch(err){ console.error(err); toast(err.message||'Something went wrong'); }
+});
+
+// live slider labels
+document.addEventListener('input', (e)=>{
+  const s=e.target.closest('[data-act="section-pct"]');
+  if(s){ const lbl=s.parentElement.querySelector('.secpct'); if(lbl) lbl.textContent=s.value+'%'; return; }
+  const r=e.target.closest('[data-act="room-pct"]');
+  if(r){ const lbl=r.closest('.room').querySelector('.pctbig'); if(lbl) lbl.textContent=r.value+'%'; }
+});
+document.addEventListener('change', async (e)=>{
+  const s=e.target.closest('[data-act="room-pct"]');
+  if(s){ try{ await set('rooms',s.dataset.id,{percent:Number(s.value)}); await refresh(); }catch(err){toast('Could not save');} return; }
+  const sec=e.target.closest('[data-act="section-pct"]');
+  if(sec){ try{ await set('sections',sec.dataset.id,{percent:Number(sec.value)}); await refresh(); }catch(err){toast('Could not save');} return; }
+  const p=e.target.closest('[data-photo]');
+  if(p && p.files[0]){
+    const slot=p.dataset.photo; const note=document.getElementById(slot+'-photo');
+    if(note) note.textContent='Uploading photo…';
+    try{ pendingPhoto[slot]=await uploadPhoto(p.files[0]); if(note) note.innerHTML='<span class="chip room"><i data-lucide="check"></i>Photo ready</span>'; icons(); }
+    catch(err){ if(note) note.textContent=''; toast(err.message||'Photo failed'); }
+  }
+});
+// goal type toggles the right dropdown
+document.addEventListener('change',(e)=>{
+  if(e.target.closest('[data-act="goal-type"]')){
+    const v=e.target.value;
+    const r=document.getElementById('goal-room'); if(r) r.classList.toggle('hidden', v!=='room');
+    const s=document.getElementById('goal-section'); if(s) s.classList.toggle('hidden', v!=='section');
+  }
+});
+
+const val = id => (document.getElementById(id)?.value||'').trim();
+const chk = id => !!document.getElementById(id)?.checked;
+
+/* ------------------------- auth ------------------------- */
+function gate(inner){ root.innerHTML = `<div class="gate"><div class="box">
+  <div class="mark">${HOME_SVG}</div>${inner}</div></div>`; icons(); }
+
+function loginScreen(msg){
+  gate(`<h1>Homeward</h1><p>${msg||'Your move, sorted. Sign in with your email.'}</p>
+    <input type="text" id="email" placeholder="you@email.com" autocomplete="email">
+    <button class="btn" id="send"><i data-lucide="mail"></i>Send me a link</button>`);
+  document.getElementById('send').onclick = async ()=>{
+    const email=val('email'); if(!email){toast('Enter your email');return;}
+    try{
+      await account.createMagicURLToken({ userId:ID.unique(), email,
+        url: location.origin + location.pathname });
+      gate(`<h1>Check your email</h1><p>We sent a sign-in link to <b>${esc(email)}</b>. Open it on this device to continue.</p>`);
+    }catch(err){ toast(err.message||'Could not send link'); }
+  };
+}
+
+function memberPicker(){
+  gate(`<h1>Who’s this?</h1><p>Pick your name so we can tag things to you.</p>
+    <div class="picker">${MEMBERS.map(m=>`<button data-pick="${esc(m)}">${esc(m)}</button>`).join('')}</div>`);
+  root.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async ()=>{
+    try{ await account.updateName({ name:b.dataset.pick }); state.me=b.dataset.pick; await start(); }
+    catch(err){ toast(err.message||'Could not save'); }
+  });
+}
+
+async function loadUser(){
+  const u = await account.get();
+  state.email = (u.email||'').toLowerCase();
+  if(ALLOWED_EMAILS.length && !ALLOWED_EMAILS.includes(state.email)){
+    await account.deleteSession({ sessionId:'current' });
+    loginScreen('That email isn’t on the guest list for this Homeward.'); return false;
+  }
+  state.me = u.name||'';
+  return true;
+}
+async function start(){ await refresh(); }
+
+async function boot(){
+  const p = new URLSearchParams(location.search);
+  const userId=p.get('userId'), secret=p.get('secret');
+  if(userId && secret){
+    try{ await account.createSession({ userId, secret }); }catch(err){}
+    history.replaceState({}, '', location.origin + location.pathname);
+  }
+  try{
+    const ok = await loadUser();
+    if(!ok) return;
+    if(!MEMBERS.includes(state.me)){ memberPicker(); return; }
+    await start();
+  }catch(err){
+    loginScreen();
+  }
+}
+boot();
+</script>
+</body>
+</html>
