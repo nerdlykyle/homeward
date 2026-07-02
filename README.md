@@ -1,6 +1,6 @@
 # Homeward
 
-A private move tracker for our household — packing, decisions, and follow-ups in one place, synced across our phones and desktops.
+A private move tracker for our household — packing, decisions, and follow-ups in one place, synced across our phones and desktops. Easy.
 
 **Live:** https://nerdlykyle.github.io/homeward/
 
