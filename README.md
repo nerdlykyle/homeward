@@ -4,7 +4,7 @@ A private move tracker for our household — packing, decisions, and follow-ups 
 
 **Live:** https://nerdlykyle.github.io/homeward/
 
-Sign in with a magic link (email), pick your name, and you're in. Everything is shared — we both see and edit the same data.
+Sign in with a magic link (email), pick your name, and you're in. Easy. Everything is shared — we both see and edit the same data.
 
 ---
 
