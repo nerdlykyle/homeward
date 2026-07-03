@@ -148,7 +148,18 @@
   .madebar{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);color:var(--accent-ink);
     border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px;font-weight:500}
   .madebar b{font-family:"Bricolage Grotesque";font-size:19px}
-  .listbar{display:flex;align-items:center;gap:8px;margin:-6px 0 16px}
+  .listbar{display:flex;align-items:center;gap:8px;margin:0 0 14px}
+  .pills{display:flex;gap:8px;margin-bottom:18px}
+  .pill{border:1px solid var(--line-strong);background:var(--card);border-radius:20px;padding:8px 18px;
+    font-family:"Bricolage Grotesque";font-weight:600;font-size:14.5px;color:var(--muted)}
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .listcard{overflow:hidden}
+  .listhead{display:flex;align-items:center;gap:10px;padding:15px 16px;cursor:pointer;user-select:none}
+  .listhead:hover{background:var(--paper)}
+  .chev{width:18px;height:18px;color:var(--muted);transition:transform .2s}
+  .listcard.open .chev{transform:rotate(180deg)}
+  .listbody{padding:0 16px 16px;border-top:1px solid var(--line);padding-top:14px}
+  .unlabel{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 0 -4px;font-weight:600}
 
   .empty{text-align:center;color:var(--muted);padding:44px 20px}
   .empty svg{width:30px;height:30px;margin-bottom:10px;opacity:.5}
@@ -598,36 +609,52 @@ function pileRow(t){
 
 /* ---------- TASKS ---------- */
 function tasksView(){
+  if(!state.taskview || !MEMBERS.includes(state.taskview)) state.taskview = state.me;
+  const view = state.taskview;
   const lists = state.tasklists.filter(l=>!l.done);
+  const mine = lists.filter(l=>l.assignedTo===view);
+  const un   = lists.filter(l=>!MEMBERS.includes(l.assignedTo||''));
+  const pills = `<div class="pills">${MEMBERS.map(m=>
+    `<button class="pill ${m===view?'on':''}" data-act="taskview" data-who="${esc(m)}">${esc(m)}</button>`).join('')}</div>`;
   const newListForm = `<div class="additem">
     <input type="text" id="list-name" placeholder="New list — e.g. Utilities, Movers…">
     <button class="btn" data-act="add-list"><i data-lucide="plus"></i>New list</button></div>`;
-  if(!lists.length){
-    return head('Tasks','Lists of things to get done.') + newListForm +
-      empty('clipboard-list','No lists yet. Make one above.');
+  let cards = mine.map(listCard).join('');
+  if(un.length) cards += `<div class="unlabel">Unassigned</div>` + un.map(listCard).join('');
+  if(!mine.length && !un.length) cards = empty('clipboard-list', `No lists for ${esc(view)} yet. Make one above.`);
+  return head('Tasks','Lists of things to get done.') + pills + newListForm + `<div class="stack">${cards}</div>`;
+}
+function listCard(l){
+  const open = state.expanded===l.$id;
+  const items = state.tasks.filter(t=>t.listId===l.$id && !t.done);
+  let body='';
+  if(open){
+    body = `<div class="listbody">
+      <div class="listbar">
+        ${whoSelect('assign-list', l.$id, l.assignedTo)}
+        <button class="iconbtn" data-act="rename-list" data-id="${l.$id}" title="Rename"><i data-lucide="pencil"></i></button>
+        <span style="flex:1"></span>
+        <button class="btn ghost sm" data-act="archive-list" data-id="${l.$id}"><i data-lucide="archive"></i>Archive</button>
+        <button class="iconbtn" data-act="del-list" data-id="${l.$id}" title="Delete list"><i data-lucide="trash-2"></i></button>
+      </div>
+      <div class="stack" style="gap:8px;margin-bottom:14px">
+        <input type="text" id="task-title" placeholder="Add an item…">
+        <textarea id="task-desc" placeholder="Description (optional)"></textarea>
+        <button class="btn sm" style="align-self:flex-start" data-act="add-task" data-id="${l.$id}"><i data-lucide="plus"></i>Add</button>
+      </div>
+      ${items.length?`<div class="stack" style="gap:0">${items.map(taskRow).join('')}</div>`:'<div class="meta">All clear here.</div>'}
+    </div>`;
   }
-  if(!lists.find(l=>l.$id===state.sub.tasks)) state.sub.tasks = lists[0].$id;
-  const cur = lists.find(l=>l.$id===state.sub.tasks);
-  const tabs = subtabs('tasks', lists.map(l=>[l.$id, esc(l.name)]));
-  const listBar = `<div class="listbar">
-    <span style="font-weight:600">${esc(cur.name)}</span>
-    <button class="iconbtn" data-act="rename-list" data-id="${cur.$id}" title="Rename"><i data-lucide="pencil"></i></button>
-    <span style="flex:1"></span>
-    <button class="btn ghost sm" data-act="archive-list" data-id="${cur.$id}"><i data-lucide="archive"></i>Archive list</button>
-    <button class="iconbtn" data-act="del-list" data-id="${cur.$id}" title="Delete list"><i data-lucide="trash-2"></i></button>
-  </div>`;
-  const form = `<div class="card" style="padding:16px;margin-bottom:20px"><div class="stack">
-      <input type="text" id="task-title" placeholder="Add an item…">
-      <textarea id="task-desc" placeholder="Description (optional)"></textarea>
-      <button class="btn" style="align-self:flex-start" data-act="add-task"><i data-lucide="plus"></i>Add</button>
-    </div></div>`;
-  const active = state.tasks.filter(t=>t.listId===cur.$id && !t.done);
-  const list = active.length ? `<div class="card"><div class="stack" style="gap:0">${active.map(taskRow).join('')}</div></div>`
-    : empty('clipboard-list', 'All clear here.');
-  return head('Tasks','Lists of things to get done.') + newListForm + tabs + listBar + form + list;
+  return `<div class="card listcard ${open?'open':''}">
+    <div class="listhead" data-act="toggle-list" data-id="${l.$id}">
+      <span style="font-weight:600">${esc(l.name)}</span>
+      <span class="chip who">${items.length} open</span>
+      <span style="flex:1"></span>
+      <i data-lucide="chevron-down" class="chev"></i>
+    </div>${body}</div>`;
 }
 function taskRow(t){
-  return `<div class="item">
+  return `<div class="item" style="padding-left:0;padding-right:0">
     <input type="checkbox" class="check" data-act="task-done" data-id="${t.$id}">
     <div class="body"><p class="title">${esc(t.title)}</p>
       ${t.description?`<div class="meta">${esc(t.description)}</div>`:''}</div>
@@ -737,8 +764,12 @@ document.addEventListener('click', async (e)=>{
     if(act==='pile-done'){ await set('triage',id,{status:'archived'}); await refresh(); return; }
     if(act==='del-triage'){ await del('triage',id); await refresh(); return; }
 
+    if(act==='taskview'){ state.taskview=el.dataset.who; state.expanded=null; render(); return; }
+    if(act==='toggle-list'){ state.expanded = state.expanded===id ? null : id; render(); return; }
+
     if(act==='add-list'){ const name=val('list-name'); if(!name) return;
-      const doc=await add('tasklists',{name,done:false}); state.sub.tasks=doc.$id; await refresh(); return; }
+      const doc=await add('tasklists',{name,done:false,assignedTo:state.taskview||state.me});
+      state.expanded=doc.$id; await refresh(); return; }
     if(act==='rename-list'){ const l=state.tasklists.find(x=>x.$id===id);
       const name=prompt('Rename list:', l?.name||''); if(!name||!name.trim()) return;
       await set('tasklists',id,{name:name.trim()}); await refresh(); return; }
@@ -750,7 +781,7 @@ document.addEventListener('click', async (e)=>{
 
     if(act==='add-task'){ const title=val('task-title'); if(!title) return;
       await add('tasks',{title, description:val('task-desc'), category:'list',
-        listId:state.sub.tasks, done:false}); await refresh(); return; }
+        listId:id, done:false}); await refresh(); return; }
     if(act==='task-done'){ await set('tasks',id,{done:true}); await refresh(); return; }
     if(act==='del-task'){ await del('tasks',id); await refresh(); return; }
 
@@ -778,6 +809,9 @@ document.addEventListener('change', async (e)=>{
   const as=e.target.closest('[data-act="assign-section"]');
   if(as){ const x=state.sections.find(y=>y.$id===as.dataset.id); if(x) x.assignedTo=as.value;
     render(); saveQuiet('sections',as.dataset.id,{assignedTo:as.value}); return; }
+  const al=e.target.closest('[data-act="assign-list"]');
+  if(al){ const l=state.tasklists.find(y=>y.$id===al.dataset.id); if(l) l.assignedTo=al.value;
+    render(); saveQuiet('tasklists',al.dataset.id,{assignedTo:al.value}); return; }
   const p=e.target.closest('[data-photo]');
   if(p && p.files[0]){
     const slot=p.dataset.photo; const note=document.getElementById(slot+'-photo');
@@ -855,8 +889,8 @@ async function start(){
   // One-time carry-over: if lists don't exist yet, make School + Vic and
   // move the old items into them. Runs once, then never again.
   if(!state.tasklists.length){
-    const school = await add('tasklists',{name:'School',done:false});
-    const vic    = await add('tasklists',{name:'Vic',done:false});
+    const school = await add('tasklists',{name:'School',done:false,assignedTo:'Kyle'});
+    const vic    = await add('tasklists',{name:'Vic',done:false,assignedTo:'Kyle'});
     await Promise.all(state.tasks.map(t=>
       set('tasks',t.$id,{listId: t.category==='vic' ? vic.$id : school.$id})));
     await refresh();
