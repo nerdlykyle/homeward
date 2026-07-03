@@ -215,7 +215,7 @@ const MEMBERS  = ['Kyle', 'Andrea'];
 
 // Optional lock: only these emails can get in. Leave [] to allow anyone who
 // logs in. To lock it to just you two, add both emails, e.g.
-// const ALLOWED_EMAILS = ['kyle@example.com', 'andrea@example.com'];
+// const ALLOWED_EMAILS = ['kjsparsons@gmail.com', 'aelparsons@gmail.com'];
 const ALLOWED_EMAILS = [];
 /* ================================================================== */
 
@@ -750,15 +750,30 @@ function gate(inner){ root.innerHTML = `<div class="gate"><div class="box">
 
 function loginScreen(msg){
   gate(`<h1>Homeward</h1><p>${msg||'Your move, sorted. Sign in with your email.'}</p>
-    <input type="text" id="email" placeholder="you@email.com" autocomplete="email">
-    <button class="btn" id="send"><i data-lucide="mail"></i>Send me a link</button>`);
+    <input type="text" id="email" placeholder="you@email.com" autocomplete="email" inputmode="email">
+    <button class="btn" id="send"><i data-lucide="mail"></i>Email me a code</button>`);
   document.getElementById('send').onclick = async ()=>{
     const email=val('email'); if(!email){toast('Enter your email');return;}
+    const btn=document.getElementById('send'); btn.disabled=true;
     try{
-      await account.createMagicURLToken({ userId:ID.unique(), email,
-        url: location.origin + location.pathname });
-      gate(`<h1>Check your email</h1><p>We sent a sign-in link to <b>${esc(email)}</b>. Open it on this device to continue.</p>`);
-    }catch(err){ toast(err.message||'Could not send link'); }
+      const tok = await account.createEmailToken({ userId:ID.unique(), email });
+      codeScreen(email, tok.userId);
+    }catch(err){ toast(err.message||'Could not send code'); btn.disabled=false; }
+  };
+}
+
+function codeScreen(email, userId){
+  gate(`<h1>Check your email</h1><p>We sent a 6-digit code to <b>${esc(email)}</b>. Enter it below.</p>
+    <input type="text" id="code" placeholder="123456" inputmode="numeric" autocomplete="one-time-code"
+      maxlength="6" style="letter-spacing:.35em;font-size:20px">
+    <button class="btn" id="verify"><i data-lucide="log-in"></i>Sign in</button>
+    <button class="btn ghost" id="back" style="margin-top:8px;width:100%;justify-content:center"><i data-lucide="arrow-left"></i>Use a different email</button>`);
+  document.getElementById('back').onclick = ()=>loginScreen();
+  document.getElementById('verify').onclick = async ()=>{
+    const code=val('code').replace(/[^0-9]/g,''); if(code.length<6){toast('Enter the 6-digit code');return;}
+    const btn=document.getElementById('verify'); btn.disabled=true;
+    try{ await account.createSession({ userId, secret:code }); await afterLogin(); }
+    catch(err){ toast('That code didn’t work — check it and try again'); btn.disabled=false; }
   };
 }
 
@@ -783,21 +798,16 @@ async function loadUser(){
 }
 async function start(){ await refresh(); }
 
+async function afterLogin(){
+  const ok = await loadUser();
+  if(!ok) return;
+  if(!MEMBERS.includes(state.me)){ memberPicker(); return; }
+  await start();
+}
+
 async function boot(){
-  const p = new URLSearchParams(location.search);
-  const userId=p.get('userId'), secret=p.get('secret');
-  if(userId && secret){
-    try{ await account.createSession({ userId, secret }); }catch(err){}
-    history.replaceState({}, '', location.origin + location.pathname);
-  }
-  try{
-    const ok = await loadUser();
-    if(!ok) return;
-    if(!MEMBERS.includes(state.me)){ memberPicker(); return; }
-    await start();
-  }catch(err){
-    loginScreen();
-  }
+  try{ await afterLogin(); }
+  catch(err){ loginScreen(); }
 }
 boot();
 </script>
