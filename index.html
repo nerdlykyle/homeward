@@ -120,6 +120,8 @@
   .sec .iconbtn{padding:4px}
   .addsec{display:flex;align-items:center;gap:6px;margin-top:10px}
   .addsec input{padding:8px 11px;font-size:13.5px}
+  .whosel{width:auto;padding:5px 8px;font-size:12.5px;border-radius:8px;color:var(--muted);border-color:var(--line)}
+  .whosel:has(option:checked:not([value=""])){color:var(--accent-ink);font-weight:600;border-color:var(--accent-soft);background:var(--accent-soft)}
   .stepper{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
   .stepper button{background:var(--card);border:none;width:30px;height:30px;display:grid;place-items:center;color:var(--ink)}
   .stepper button:hover{background:var(--paper)}
@@ -146,6 +148,7 @@
   .madebar{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);color:var(--accent-ink);
     border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px;font-weight:500}
   .madebar b{font-family:"Bricolage Grotesque";font-size:19px}
+  .listbar{display:flex;align-items:center;gap:8px;margin:-6px 0 16px}
 
   .empty{text-align:center;color:var(--muted);padding:44px 20px}
   .empty svg{width:30px;height:30px;margin-bottom:10px;opacity:.5}
@@ -215,7 +218,7 @@ const MEMBERS  = ['Kyle', 'Andrea'];
 
 // Optional lock: only these emails can get in. Leave [] to allow anyone who
 // logs in. To lock it to just you two, add both emails, e.g.
-// const ALLOWED_EMAILS = ['kjsparsons@gmail.com', 'aelparsons@gmail.com'];
+// const ALLOWED_EMAILS = ['kyle@example.com', 'andrea@example.com'];
 const ALLOWED_EMAILS = [];
 /* ================================================================== */
 
@@ -238,7 +241,7 @@ const icons = () => window.lucide && window.lucide.createIcons();
 const state = {
   me:'', email:'', section:'packing',
   sub:{ packing:'rooms', sort:'questions', tasks:'school' },
-  rooms:[], sections:[], boxes:[], goals:[], triage:[], tasks:[]
+  rooms:[], sections:[], boxes:[], goals:[], triage:[], tasks:[], tasklists:[]
 };
 
 const NAV = [
@@ -257,10 +260,16 @@ const set = (cid,id,data)=>db.updateDocument({ databaseId:DB, collectionId:cid, 
 const del = (cid,id)=>db.deleteDocument({ databaseId:DB, collectionId:cid, documentId:id });
 
 async function refresh(){
-  const [rooms,sections,boxes,goals,triage,tasks] = await Promise.all(
-    ['rooms','sections','boxes','goals','triage','tasks'].map(listAll));
-  Object.assign(state,{rooms,sections,boxes,goals,triage,tasks});
+  const [rooms,sections,boxes,goals,triage,tasks,tasklists] = await Promise.all(
+    ['rooms','sections','boxes','goals','triage','tasks','tasklists'].map(listAll));
+  Object.assign(state,{rooms,sections,boxes,goals,triage,tasks,tasklists});
   render();
+}
+
+// Update the screen instantly, save to the cloud in the background.
+// Everyone still gets the change — it just doesn't make YOU wait.
+function saveQuiet(cid, id, data){
+  set(cid, id, data).catch(()=>{ toast('Could not save — check connection'); refresh(); });
 }
 
 /* photos */
@@ -382,6 +391,10 @@ function packingView(){
   return head('Packing', 'Track each room and every box.') +
     subtabs('packing', [['rooms','Rooms'],['boxes','Boxes']]) + body;
 }
+const whoSelect = (act, id, cur) => `<select class="whosel" data-act="${act}" data-id="${id}">
+  <option value="">Unassigned</option>
+  ${MEMBERS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('')}</select>`;
+
 function roomCard(r){
   const secs = sectionsOf(r.$id);
   const has = secs.length>0;
@@ -391,6 +404,7 @@ function roomCard(r){
     : `<input type="range" min="0" max="100" step="5" value="${r.percent||0}" data-act="room-pct" data-id="${r.$id}">`;
   return `<div class="card room" data-id="${r.$id}">
     <div class="top"><span class="name">${esc(r.name)}</span>
+      ${whoSelect('assign-room', r.$id, r.assignedTo)}
       <span class="pctbig" data-pctlabel>${pct}%</span>
       <button class="iconbtn" data-act="del-room" data-id="${r.$id}"><i data-lucide="trash-2"></i></button></div>
     ${slider}
@@ -410,6 +424,7 @@ function secRow(s){
     <span class="secname">${esc(s.name)}</span>
     <input type="range" min="0" max="100" step="5" value="${s.percent||0}" data-act="section-pct" data-id="${s.$id}">
     <span class="secpct" data-pctlabel>${s.percent||0}%</span>
+    ${whoSelect('assign-section', s.$id, s.assignedTo)}
     <button class="iconbtn" data-act="del-section" data-id="${s.$id}"><i data-lucide="x"></i></button>
   </div>`;
 }
@@ -583,25 +598,39 @@ function pileRow(t){
 
 /* ---------- TASKS ---------- */
 function tasksView(){
-  const sub = state.sub.tasks;
-  const meta = sub==='school'
-    ? ['Isla · Nipher Middle School', 'graduation-cap', 'Prep the 7th-grade registration paperwork. Submit after closing.']
-    : ['Vic · painter & carpet', 'paintbrush', 'Follow-ups on the painter and carpet.'];
-  const active = state.tasks.filter(t=>t.category===sub && !t.done);
-  const form = `<div class="additem">
-    <input type="text" id="task-title" placeholder="Add an item…">
-    <button class="btn" data-act="add-task"><i data-lucide="plus"></i>Add</button></div>`;
+  const lists = state.tasklists.filter(l=>!l.done);
+  const newListForm = `<div class="additem">
+    <input type="text" id="list-name" placeholder="New list — e.g. Utilities, Movers…">
+    <button class="btn" data-act="add-list"><i data-lucide="plus"></i>New list</button></div>`;
+  if(!lists.length){
+    return head('Tasks','Lists of things to get done.') + newListForm +
+      empty('clipboard-list','No lists yet. Make one above.');
+  }
+  if(!lists.find(l=>l.$id===state.sub.tasks)) state.sub.tasks = lists[0].$id;
+  const cur = lists.find(l=>l.$id===state.sub.tasks);
+  const tabs = subtabs('tasks', lists.map(l=>[l.$id, esc(l.name)]));
+  const listBar = `<div class="listbar">
+    <span style="font-weight:600">${esc(cur.name)}</span>
+    <button class="iconbtn" data-act="rename-list" data-id="${cur.$id}" title="Rename"><i data-lucide="pencil"></i></button>
+    <span style="flex:1"></span>
+    <button class="btn ghost sm" data-act="archive-list" data-id="${cur.$id}"><i data-lucide="archive"></i>Archive list</button>
+    <button class="iconbtn" data-act="del-list" data-id="${cur.$id}" title="Delete list"><i data-lucide="trash-2"></i></button>
+  </div>`;
+  const form = `<div class="card" style="padding:16px;margin-bottom:20px"><div class="stack">
+      <input type="text" id="task-title" placeholder="Add an item…">
+      <textarea id="task-desc" placeholder="Description (optional)"></textarea>
+      <button class="btn" style="align-self:flex-start" data-act="add-task"><i data-lucide="plus"></i>Add</button>
+    </div></div>`;
+  const active = state.tasks.filter(t=>t.listId===cur.$id && !t.done);
   const list = active.length ? `<div class="card"><div class="stack" style="gap:0">${active.map(taskRow).join('')}</div></div>`
-    : empty(meta[1], 'All clear here.');
-  return head('Tasks','Registration and follow-ups.') +
-    subtabs('tasks', [['school','School'],['vic','Vic']]) +
-    `<div class="meta" style="margin:-8px 0 18px;gap:7px"><i data-lucide="${meta[1]}" style="width:16px;height:16px"></i>${meta[0]} — ${meta[2]}</div>` +
-    form + list;
+    : empty('clipboard-list', 'All clear here.');
+  return head('Tasks','Lists of things to get done.') + newListForm + tabs + listBar + form + list;
 }
 function taskRow(t){
   return `<div class="item">
     <input type="checkbox" class="check" data-act="task-done" data-id="${t.$id}">
-    <div class="body"><p class="title">${esc(t.title)}</p></div>
+    <div class="body"><p class="title">${esc(t.title)}</p>
+      ${t.description?`<div class="meta">${esc(t.description)}</div>`:''}</div>
     <button class="iconbtn" data-act="del-task" data-id="${t.$id}"><i data-lucide="trash-2"></i></button></div>`;
 }
 
@@ -610,10 +639,15 @@ function archiveView(){
   const arch = state.triage.filter(t=>t.status==='archived');
   const doneTasks = state.tasks.filter(t=>t.done);
   const doneGoals = state.goals.filter(g=>g.type==='oneoff' && g.done);
+  const doneLists = state.tasklists.filter(l=>l.done);
   const rows = [];
   arch.forEach(t=>rows.push(archRow(t.description, resLabel(t), 'triage', t.$id)));
   doneGoals.forEach(g=>rows.push(archRow(g.title, {t:'Goal done',c:'keep',i:'target'}, 'goals', g.$id)));
-  doneTasks.forEach(t=>rows.push(archRow(t.title, {t: t.category==='school'?'School':'Vic', c:'donate', i:'clipboard-list'}, 'tasks', t.$id)));
+  doneTasks.forEach(t=>{
+    const l = state.tasklists.find(x=>x.$id===t.listId);
+    rows.push(archRow(t.title, {t: l?esc(l.name):'Task', c:'donate', i:'clipboard-list'}, 'tasks', t.$id));
+  });
+  doneLists.forEach(l=>rows.push(archRow(l.name, {t:'List done', c:'keep', i:'archive'}, 'tasklists', l.$id)));
   const body = rows.length ? `<div class="card"><div class="stack" style="gap:0">${rows.join('')}</div></div>`
     : empty('archive','Nothing archived yet.');
   return head('Archive','Everything you’ve finished and cleared.') + body;
@@ -653,8 +687,8 @@ document.addEventListener('click', async (e)=>{
       await Promise.all(sectionsOf(id).map(s=>del('sections',s.$id)));
       await del('rooms',id); await refresh(); return; }
     if(act==='room-box'){ const r=state.rooms.find(x=>x.$id===id);
-      const n=Math.max(0,(r.boxes||0)+Number(el.dataset.d));
-      await set('rooms',id,{boxes:n}); await refresh(); return; }
+      r.boxes=Math.max(0,(r.boxes||0)+Number(el.dataset.d));
+      render(); saveQuiet('rooms',id,{boxes:r.boxes}); return; }
 
     if(act==='add-section'){ const inp=el.closest('.room').querySelector('[data-secinput]');
       const name=(inp?.value||'').trim(); if(!name){toast('Name the section');return;}
@@ -703,8 +737,20 @@ document.addEventListener('click', async (e)=>{
     if(act==='pile-done'){ await set('triage',id,{status:'archived'}); await refresh(); return; }
     if(act==='del-triage'){ await del('triage',id); await refresh(); return; }
 
+    if(act==='add-list'){ const name=val('list-name'); if(!name) return;
+      const doc=await add('tasklists',{name,done:false}); state.sub.tasks=doc.$id; await refresh(); return; }
+    if(act==='rename-list'){ const l=state.tasklists.find(x=>x.$id===id);
+      const name=prompt('Rename list:', l?.name||''); if(!name||!name.trim()) return;
+      await set('tasklists',id,{name:name.trim()}); await refresh(); return; }
+    if(act==='archive-list'){ await set('tasklists',id,{done:true}); await refresh(); return; }
+    if(act==='del-list'){
+      if(!confirm('Delete this list and everything in it? This can’t be undone.')) return;
+      await Promise.all(state.tasks.filter(t=>t.listId===id).map(t=>del('tasks',t.$id)));
+      await del('tasklists',id); await refresh(); return; }
+
     if(act==='add-task'){ const title=val('task-title'); if(!title) return;
-      await add('tasks',{title, category:state.sub.tasks, done:false}); await refresh(); return; }
+      await add('tasks',{title, description:val('task-desc'), category:'list',
+        listId:state.sub.tasks, done:false}); await refresh(); return; }
     if(act==='task-done'){ await set('tasks',id,{done:true}); await refresh(); return; }
     if(act==='del-task'){ await del('tasks',id); await refresh(); return; }
 
@@ -721,9 +767,17 @@ document.addEventListener('input', (e)=>{
 });
 document.addEventListener('change', async (e)=>{
   const s=e.target.closest('[data-act="room-pct"]');
-  if(s){ try{ await set('rooms',s.dataset.id,{percent:Number(s.value)}); await refresh(); }catch(err){toast('Could not save');} return; }
+  if(s){ const r=state.rooms.find(x=>x.$id===s.dataset.id); if(r) r.percent=Number(s.value);
+    render(); saveQuiet('rooms',s.dataset.id,{percent:Number(s.value)}); return; }
   const sec=e.target.closest('[data-act="section-pct"]');
-  if(sec){ try{ await set('sections',sec.dataset.id,{percent:Number(sec.value)}); await refresh(); }catch(err){toast('Could not save');} return; }
+  if(sec){ const x=state.sections.find(y=>y.$id===sec.dataset.id); if(x) x.percent=Number(sec.value);
+    render(); saveQuiet('sections',sec.dataset.id,{percent:Number(sec.value)}); return; }
+  const ar=e.target.closest('[data-act="assign-room"]');
+  if(ar){ const r=state.rooms.find(x=>x.$id===ar.dataset.id); if(r) r.assignedTo=ar.value;
+    render(); saveQuiet('rooms',ar.dataset.id,{assignedTo:ar.value}); return; }
+  const as=e.target.closest('[data-act="assign-section"]');
+  if(as){ const x=state.sections.find(y=>y.$id===as.dataset.id); if(x) x.assignedTo=as.value;
+    render(); saveQuiet('sections',as.dataset.id,{assignedTo:as.value}); return; }
   const p=e.target.closest('[data-photo]');
   if(p && p.files[0]){
     const slot=p.dataset.photo; const note=document.getElementById(slot+'-photo');
@@ -796,7 +850,18 @@ async function loadUser(){
   state.me = u.name||'';
   return true;
 }
-async function start(){ await refresh(); }
+async function start(){
+  await refresh();
+  // One-time carry-over: if lists don't exist yet, make School + Vic and
+  // move the old items into them. Runs once, then never again.
+  if(!state.tasklists.length){
+    const school = await add('tasklists',{name:'School',done:false});
+    const vic    = await add('tasklists',{name:'Vic',done:false});
+    await Promise.all(state.tasks.map(t=>
+      set('tasks',t.$id,{listId: t.category==='vic' ? vic.$id : school.$id})));
+    await refresh();
+  }
+}
 
 async function afterLogin(){
   const ok = await loadUser();
